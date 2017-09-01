@@ -1,7 +1,9 @@
-package docker_stats_monitor
+package docker_api_client
 
 type ContainerStats struct {
-	Read string    `json:"read"`
+	Name     string `json:"name"`
+	Image    string
+	ImageTag string
 
 	CpuStats struct {
 		CpuUsage struct {

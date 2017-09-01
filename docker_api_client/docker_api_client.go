@@ -1,13 +1,13 @@
-package docker_stats_monitor
+package docker_api_client
 
 import (
-	"github.com/docker/docker/client"
-	"io/ioutil"
+	"context"
 	"encoding/json"
 	"github.com/docker/docker/api/types"
-	"context"
-	"github.com/docker/docker/daemon/stats"
+	"github.com/docker/docker/client"
 	"io"
+	"io/ioutil"
+	"strings"
 )
 
 type DockerApiClient struct {
@@ -33,11 +33,21 @@ func (apiClient *DockerApiClient) GetContainersStats() ([]ContainerStats, error)
 		return nil, err
 	}
 
+	var containersStats []ContainerStats
 	for _, container := range containers {
-		getContainerStats(cli, ctx, container)
-	}
-}
+		stats, err := getContainerStats(cli, ctx, container)
+		if err != nil {
+			return nil, err
+		}
 
+		image, imageTag := extractImageAndTag(container.Image)
+		stats.Image = image
+		stats.ImageTag = imageTag
+		containersStats = append(containersStats, *stats)
+	}
+
+	return containersStats, nil
+}
 func getContainerStats(cli *client.Client, ctx context.Context, container types.Container) (*ContainerStats, error) {
 	response, err := cli.ContainerStats(ctx, container.ID, false)
 	if err != nil {
@@ -64,4 +74,15 @@ func parseContainerStatsResponse(response io.ReadCloser) (*ContainerStats, error
 	if err != nil {
 		return nil, err
 	}
+
+	return containerStats, nil
+}
+
+func extractImageAndTag(image string) (string, string) {
+	splitted := strings.Split(image, ":")
+	if len(splitted) > 1 {
+		return splitted[0], strings.Join(splitted[1:], ":")
+	}
+
+	return splitted[0], "latest"
 }
