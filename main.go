@@ -27,7 +27,14 @@ func reportDockerStats() {
 	if err != nil {
 		panic(err)
 	}
-	jsonFormatted, err := json.Marshal(containersStats)
+
+	for _, stats := range containersStats {
+		printJsonFormattedStats(&stats)
+	}
+}
+
+func printJsonFormattedStats(stats *docker_api_client.ContainerStats) {
+	jsonFormatted, err := json.Marshal(stats)
 	if err != nil {
 		panic(err)
 	}
