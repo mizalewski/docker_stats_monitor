@@ -1,0 +1,45 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: golang:1.8.1
+    working_directory: /go/src/github.com/mizalewski/docker_stats_monitor
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 17.05.0-ce
+
+      - run:
+          name: Install Docker client
+          command: |
+            set -x
+            VER="17.05.0-ce"
+            curl -L -o /tmp/docker-$VER.tgz https://get.docker.com/builds/Linux/x86_64/docker-$VER.tgz
+            tar -xz -C /tmp -f /tmp/docker-$VER.tgz
+            mv /tmp/docker/* /usr/bin
+
+      - run: |
+          go get -u github.com/kardianos/govendor
+          govendor sync
+
+      - run: |
+          CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
+
+      - run: |
+          docker build -t ${NAME} .
+
+      - deploy:
+          name: Deploy to EC2 Container Registry if branch is master
+          command: |
+            if ! [ -n "${RUN_NIGHTLY_BUILD}" ]; then
+              if [ `git tag -l --points-at HEAD | head -n 1` ]; then
+                GIT_DESCRIBE=$(git describe)
+
+                eval $(aws ecr get-login)
+
+                docker tag -f ${NAME} ${REGISTRY_HOST}/${NAME}:${GIT_DESCRIBE}-${CIRCLE_BRANCH}
+                docker push ${REGISTRY_HOST}/${NAME}
+
+                docker logout https://${REGISTRY_HOST}
+              fi
+            fi
