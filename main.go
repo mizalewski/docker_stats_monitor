@@ -12,17 +12,23 @@ const (
 )
 
 func main() {
+	dockerApiClient := createDockerApiClient()
+
 	for {
-		reportDockerStats()
+		reportDockerStats(dockerApiClient)
 		time.Sleep(SleepBetweenReports)
 	}
 }
 
-func reportDockerStats() {
+func createDockerApiClient() *docker_api_client.DockerApiClient {
 	dockerApiClient, err := docker_api_client.NewApiClient()
 	if err != nil {
 		panic(err)
 	}
+	return dockerApiClient
+}
+
+func reportDockerStats(dockerApiClient *docker_api_client.DockerApiClient) {
 	containersStats, err := dockerApiClient.GetContainersStats()
 	if err != nil {
 		panic(err)
